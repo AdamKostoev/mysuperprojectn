@@ -1,0 +1,91 @@
+import psycopg2
+import datetime
+
+
+def bd(a, b):
+    conn = psycopg2.connect(database="laba_7",
+                            user="postgres",
+                            password="12345",
+                            host="localhost",
+                            port="5432")
+
+    cursor = conn.cursor()
+
+    cursor.execute(f"""SELECT tt.id, w.day, s.name, tof.view, tt.room_number, st.time, t.full_name
+                   FROM teacher t, subject s, timetable tt, week w, start_time st, type_of_occupation tof
+                   WHERE s.id=t.fk_id_subject and tt.fk_id_teacher=t.id and tt.fk_id_week=w.id
+                   and tt.fk_type_of_occupation=tof.id and tt.fk_id_start_time=st.id and
+                   tt.id between {a} and {b} order by tt.id;""")
+
+    records = list(cursor.fetchall())
+    conn.close()
+
+    return records
+
+
+def number_week():
+    now_date = datetime.datetime.today()
+    const = datetime.datetime(2023, 3, 20)
+    return int(str(now_date - const).split()[0]) // 7 + 8
+
+
+def now_date(data):
+    month = {1: 'янв.', 2: 'февр.', 3: 'марта', 4: 'апр.', 5: 'мая', 6: 'июня.', 7: 'июля', 8: 'авг.', 9: 'сент.',
+             10: 'окт.', 11: 'нояб.', 12: 'дек.'}
+    weekdays = {"Monday": "пн", "Tuesday": "вт", "Wednesday": "ср", "Thursday": "чт", "Friday": "пт",
+                "Saturday": "сб", "Sunday": "вс"}
+    data = str(data)[:11].split('-')
+    return weekdays[datetime.date(int(data[0]), int(data[1]), int(data[2])).strftime("%A")], str(
+        int(data[2].split()[0])), month[int(data[1])]
+
+
+def print_list(mas, s, number_for_date):
+    weekdaysmapping = {'Понедельник': 0, 'Вторник': 1,
+                       'Среда': 2, 'Четверг': 3, 'Пятница': 4, 'Суббота': 5}
+    now_time = datetime.datetime.today().weekday()
+    for i in range(len(mas)):
+        day = mas[i][1]
+        subject = mas[i][2]
+        view = mas[i][3]
+        room_number = mas[i][4]
+        start_time = mas[i][5] + '\n'
+        teacher = mas[i][6]
+        num = str(i % 5 + 1) + '. '
+
+        if i % 5 == 0:
+            data = now_date(datetime.date.today() - datetime.timedelta(
+                days=now_time - number_for_date - weekdaysmapping[mas[i][1]]))
+            s += '\n' + day.upper() + ' - ' + data[1] + ' ' + data[2] + '\n'
+        if subject == '<Нет пары>':
+            s += num + start_time + subject + '\n\n'
+        else:
+            s += num + start_time + subject + '\n' + view + ' ' + room_number + '\n' + teacher + '\n\n'
+    return s
+
+
+def form(a):
+    view_week = ['нижняя', 'верхняя']
+    number = number_week()
+    number_for_date = 0
+    nt = now_date(datetime.datetime.today())
+    name_group = 'БВТ2204 • {0}, {1} {2}\n№'.format(nt[0], nt[1], nt[2])
+    if number % 2 == 1:
+        n = 0
+    else:
+        n = 30
+
+    if a == 6:
+        mas = bd(1 + n, 30 + n)
+        s = 'РАСПИСАНИЕ НА НЕДЕЛЮ\n' + name_group + str(number) + ', ' + view_week[number % 2] + '\n'
+    elif a == 7:
+        mas = bd(1 + (30 - n), 30 + (30 - n))
+        s = 'РАСПИСАНИЕ НА СЛЕДУЮЩУЮ НЕДЕЛЮ\n' + name_group + str(number) + ', ' + view_week[number % 2]
+        s += '\nОтображено расписание на следующую неделю\n(№' + str(number + 1) + ', ' + view_week[
+            abs(number % 2 - 1)] + ')\n'
+        number_for_date = 7
+
+    else:
+        mas = bd(a * 5 + 1 + n, a * 5 + 5 + n)
+        s = 'РАСПИСАНИЕ НА ' + mas[0][1].replace('а', 'у').upper() + '\n' + name_group + str(
+            number) + ', ' + view_week[number % 2] + '\n'
+    return print_list(mas, s, number_for_date)
