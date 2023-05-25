@@ -1,0 +1,58 @@
+import telebot
+from test import form, number_week
+
+bot = telebot.TeleBot("6283647183:AAG1F_Pl5_SwYqy6GpoqmmzH0ICgGD9cnaA")
+
+week_day = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "nowweek", "nextweek"]
+week_day_command = {"/monday": 0, "/tuesday": 1, "/wednesday": 2, "/thursday": 3, "/friday": 4, "/saturday": 5,
+                    "/nowweek": 6, "/nextweek": 7}
+
+
+@bot.message_handler(commands=['start', 'help'])
+def start(message):
+    ms_text = '''Я учебный бот, созданный, чтобы показывать расписание группы БВТ2204,
+я использую базу данных postgres, могу вывести ссылку на оф. сайт МТУСИ,
+а также показать какая сегодня неделя: верхняя или нижняя.
+
+Список команд:
+/monday - Расписание на Понедельник
+/tuesday - Расписание на Вторник
+/wednesday - Расписание на Среду
+/thursday - Расписание на Четверг
+/friday - Расписание на Пятницу
+/saturday - Расписание на Субботу
+/nowweek - Расписание на неделю
+/nextweek - Расписание на следующую неделю
+/week - Показывает какая сейчас неделя
+/help - Рассказывает информацию о себе
+/mtuci – Выводит ссылку на оф. сайт Мтуси 
+
+Если не хотите прописывать команды вручную, нажмите на кнопку меню и выберите нужную команду. 
+'''
+    bot.send_message(message.chat.id, ms_text)
+
+
+@bot.message_handler(commands=week_day)
+def week_list(message):
+    bot.send_message(message.chat.id, form(week_day_command[message.text]))
+
+
+@bot.message_handler(commands=['week'])
+def week(messege):
+    if number_week() % 2 == 1:
+        bot.send_message(messege.chat.id, f"Верхняя неделя, №{number_week()}")
+    else:
+        bot.send_message(messege.chat.id, f"Нижняя неделя, №{number_week()}")
+
+
+@bot.message_handler(commands=['mtuci'])
+def href_mtuci(messege):
+    bot.send_message(messege.chat.id, "Оф. сайт МТУСИ: https://mtuci.ru/", disable_web_page_preview = True)
+
+
+@bot.message_handler()
+def say(messege):
+    bot.send_message(messege.chat.id, "Извините, я Вас не понял")
+
+
+bot.polling(none_stop=True)
